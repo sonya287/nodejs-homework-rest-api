@@ -1,3 +1,5 @@
+const User = require('../model/user');
+
 const { Schema, model } = require("mongoose");
 const { ValidLengthContactName } = require("../config/constant");
 
