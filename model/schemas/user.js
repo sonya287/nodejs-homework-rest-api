@@ -36,6 +36,14 @@ const userSchema = new Schema({
         type: String,
         enum: [FREE, PRO, PREMIUM],
         default: FREE
+    },
+    verify: {
+        type: Boolean,
+        default: false,
+    },
+    verifyToken: {
+        type: String,
+        required: [true, 'Verify token is required'],
     }
 },
     {

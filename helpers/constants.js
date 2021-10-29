@@ -28,4 +28,11 @@ const SortFields = {
     PHONE: 'phone'
 }
 
+const StatusMessage = {
+    SUCCESS: 'success',
+    ERROR: 'error'
+}
+
+const emailAddress = 'snowflakes197@outlook.com'
+
 module.exports = { Subscription, ValidEmail, HttpCode, SortFields }
