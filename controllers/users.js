@@ -2,29 +2,37 @@ const jwt = require('jsonwebtoken')
 const fs = require('fs').promises
 const path = require('path')
 const Jimp = require('jimp')
+const { nanoid } = require('nanoid')
 const Users = require('../model/users')
-const { HttpCode } = require('../helpers/constants')
+const { HttpCode, StatusMessage } = require('../helpers/constants')
+const EmailService = require('../services/email')
 const createFolderIsExist = require('../helpers/create-dir')
 require('dotenv').config()
 const SECRET_KEY = process.env.JWT_SECRET
 
 const register = async (req, res, next) => {
     try {
-        const { email } = req.body
+        const { email, name } = req.body
         const user = await Users.findByEmail(email)
         if (user) {
             return res
                 .status(HttpCode.CONFLICT)
                 .json({
-                    status: 'error',
+                    status: StatusMessage.ERROR,
                     code: HttpCode.CONFLICT,
-                    data: 'Conflict',
                     message: 'Email in use',
                 })
         }
-        const newUser = await Users.create(req.body)
+        const verifyToken = nanoid()
+        const emailService = new EmailService(process.env.NODE_ENV)
+        await emailService.sendEmail(verifyToken, email, name)
+        const newUser = await Users.create({
+            ...req.body,
+            verify: false,
+            verifyToken,
+        })
         return res.status(HttpCode.CREATED).json({
-            status: 'success',
+            status: StatusMessage.SUCCESS,
             code: HttpCode.CREATED,
             data: {
                 email: newUser.email,
@@ -57,7 +65,7 @@ const login = async (req, res, next) => {
         const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '2h' })
         await Users.updateToken(id, token)
         return res.status(HttpCode.SUCCESS).json({
-            status: 'success',
+            status: StatusMessage.SUCCESS,
             code: HttpCode.SUCCESS,
             data: {
                 token,
@@ -101,12 +109,12 @@ const addAvatar = async (req, res, next) => {
         } catch (e) {
             console.log(e.message)
         }
-        await Users.updateAvatar(id, avatarURL)
+        await Users.updateAvatar(id, avatarUrl)
         return res.json({
-            status: 'succes',
+            status: StatusMessage.SUCCESS,
             code: HttpCode.SUCCESS,
             data: {
-                avatarURL
+                avatarUrl
             }
         })
     } catch (e) {
@@ -117,7 +125,7 @@ const addAvatar = async (req, res, next) => {
 const getCurrent = async (req, res, next) => {
     try {
         return res.status(HttpCode.SUCCESS).json({
-            status: 'success',
+            status: HttpCode.SUCCESS,
             code: HttpCode.SUCCESS,
             data: {
                 user: {
@@ -131,13 +139,14 @@ const getCurrent = async (req, res, next) => {
     }
 }
 
+
 const update = async (req, res, next) => {
     try {
         const id = req.user.id
         const { subscription } = req.body
         await Users.updateSubscription(id, subscription)
         return res.status(HttpCode.SUCCESS).json({
-            status: 'success',
+            status: HttpCode.SUCCESS,
             code: HttpCode.SUCCESS,
             data: {
                 user: {
@@ -148,6 +157,27 @@ const update = async (req, res, next) => {
         })
     } catch (error) {
         next(error)
+    }
+}
+
+const verify = async (req, res, next) => {
+    try {
+        const user = await Users.findByVerifyToken(req.params.token)
+        if (user) {
+            await Users.updateVerifyToken(user.id, true, null)
+            return res.json({
+                status: StatusMessage.SUCCESS,
+                code: HttpCode.OK,
+                message: 'Verification successful!',
+            })
+        }
+        return res.status(HttpCode.NOT_FOUND).json({
+            status: StatusMessage.SUCCESS,
+            code: HttpCode.NOT_FOUND,
+            message: 'Link is not valid',
+        })
+    } catch (e) {
+        next(e)
     }
 }
 

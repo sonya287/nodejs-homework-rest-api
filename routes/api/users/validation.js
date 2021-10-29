@@ -39,3 +39,15 @@ module.exports.createUser = (req, res, next) => {
 module.exports.loginUser = (req, res, next) => {
     return validate(schemaLoginUser, req.body, next)
 }
+
+module.exports.avatarUser = (req, res, next) => {
+    if (!req.file) {
+        return res.status(HttpCode.BAD_REQUEST).json({
+            status: 'error',
+            code: HttpCode.BAD_REQUEST,
+            data: 'Bad request',
+            message: 'Missing required field avatar'
+        })
+    }
+    next()
+}
